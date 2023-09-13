@@ -1,0 +1,42 @@
+
+from Bio import Entrez
+from bs4 import BeautifulSoup
+
+# Устанавливаем адрес электронной почты для взаимодействия с базой данных PubMed
+Entrez.email = "thisadds@gmail.com"
+# Устанавливаем ключ API
+Entrez.api_key = "95c7366fd763ef1fc73623a517a7a4440e08"
+
+def search(search_term):
+    # Добавляем фильтр для типа статьи "Clinical Trial" в параметры поиска
+    search_term += ' AND "Clinical Trial"[Publication Type]'
+    # Выполняем поиск по запросу в базе данных PubMed с заданными параметрами
+    handle = Entrez.esearch(db="pubmed", term=search_term, retmax=1, sort="relevance")
+
+    # Читаем результаты поиска из ответа API
+    record = Entrez.read(handle)
+
+    # Если найдена хотя бы одна статья, получаем информацию о ней
+    if len(record["IdList"]) > 0:
+        article_id = record["IdList"][0]
+        # Получаем идентификатор первой статьи
+        handle = Entrez.efetch(db="pubmed", id=article_id, retmode="xml")
+        article = handle.read()
+        soup = BeautifulSoup(article, 'xml')
+        title = soup.find('ArticleTitle').text
+        abstract = soup.find('AbstractText')
+
+        # Извлекаем абстракт и все разделы
+        abstract_text = abstract.text if abstract else "Нет доступного абстракта для этой статьи."
+        all_sections = soup.find_all(['AbstractText', 'AbstractText', 'AbstractText', 'AbstractText', 'AbstractText', 'AbstractText'])
+        section_text = "\n\n".join([section.text for section in all_sections])
+
+        result = f"Title: {title}\nAbstract and Sections:\n{abstract_text}\n\n{section_text}"
+        return result
+    else:
+        return "Статьи по вашему запросу не найдены."
+
+if __name__ == '__main__':
+    search_term = input("Введите запрос: ")
+    search_term += " "
+    print(search(search_term))
